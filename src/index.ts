@@ -24,6 +24,10 @@ export interface MessageEvent {
   source?: string;
 }
 
+export interface EventSourceOpts {
+  headers: http2.OutgoingHttpHeaders
+}
+
 export class EventSource extends EventEmitter {
   private static CONNECTING = 0;
   private static OPEN = 1;
@@ -37,7 +41,7 @@ export class EventSource extends EventEmitter {
   private lastEventId: string;
   private request: http2.ClientHttp2Stream;
   private reconnectInterval: number;
-  constructor(url: string) {
+  constructor(url: string, opts?: EventSourceOpts) {
     super();
     this.readyState = EventSource.CONNECTING;
 
@@ -49,10 +53,18 @@ export class EventSource extends EventEmitter {
     this.reconnectInterval = 1000;
 
     const client = http2.connect(this.url.origin);
+    let headers = {
+      Accept: "text/event-stream",
+      "Cache-Control": "no-cache",
+    }
+    if (opts?.headers) {
+      headers = { ...headers, ...opts.headers }
+    }
     this.request = client.request({
-      ':path': this.url.pathname,
-      "Accept": 'text/event-stream',
-      'Cache-Control': 'no-cache',
+      ":path": this.url.searchParams
+        ? `${this.url.pathname}?${this.url.searchParams.toString()}`
+        : this.url.pathname,
+      ...headers,
     });
     this.connect();
   }
@@ -67,6 +79,10 @@ export class EventSource extends EventEmitter {
   public dispatchEvent(type: string, event: MessageEvent): boolean {
     this.emit(type, event);
     return true;
+  }
+
+  public close(): void {
+    if (!this.request.closed) this.request.close();
   }
 
   private parseEventStreamLine(
