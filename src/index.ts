@@ -1,5 +1,6 @@
 import { EventEmitter } from 'events';
 import http2 from 'http2';
+import { SecureContextOptions } from 'tls';
 import { URL } from 'url';
 
 const BOM = [239, 187, 191];
@@ -25,7 +26,9 @@ export interface MessageEvent {
 }
 
 export interface EventSourceOpts {
-  headers: http2.OutgoingHttpHeaders
+  headers: http2.OutgoingHttpHeaders,
+  rejectUnauthorized: boolean,
+  ca: SecureContextOptions["ca"],
 }
 
 export class EventSource extends EventEmitter {
@@ -51,8 +54,16 @@ export class EventSource extends EventEmitter {
     this.discardTrailingNewline = false;
     this.url = new URL(url);
     this.reconnectInterval = 1000;
+    
+    let eventSourceOptions = {} 
+    if (opts?.rejectUnauthorized !== undefined) {
+      eventSourceOptions = {...eventSourceOptions, ...{rejectUnauthorized: opts.rejectUnauthorized }}
+    }
+    if (opts?.ca !== undefined) {
+      eventSourceOptions = {...eventSourceOptions, ...{ca: opts.ca }}
+    }
 
-    const client = http2.connect(this.url.origin);
+    const client = http2.connect(this.url.origin, eventSourceOptions);
     let headers = {
       Accept: "text/event-stream",
       "Cache-Control": "no-cache",

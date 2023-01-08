@@ -1,6 +1,9 @@
 /// <reference types="node" />
+/// <reference types="node" />
+/// <reference types="node" />
 import { EventEmitter } from 'events';
 import http2 from 'http2';
+import { SecureContextOptions } from 'tls';
 export interface MessageEventOpts {
     data: string;
     origin?: string;
@@ -16,6 +19,8 @@ export interface MessageEvent {
 }
 export interface EventSourceOpts {
     headers: http2.OutgoingHttpHeaders;
+    rejectUnauthorized: boolean;
+    ca: SecureContextOptions["ca"];
 }
 export declare class EventSource extends EventEmitter {
     private static CONNECTING;
